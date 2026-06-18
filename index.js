@@ -7,6 +7,15 @@ const KB = require("./src/utils/keyboards");
 const token = process.env.BOT_TOKEN;
 if (!token) { console.error("BOT_TOKEN is not set. Add it to .env"); process.exit(1); }
 
+
+const startTime = Math.floor(Date.now() / 1000);
+
+bot.use(async (ctx, next) => {
+  const msgTime = ctx.message?.date || ctx.update?.message?.date || 0;
+  if (msgTime && msgTime < startTime) return; // ignore old messages
+  return next();
+});
+
 const bot = new Telegraf(token);
 
 bot.start((ctx) => {
