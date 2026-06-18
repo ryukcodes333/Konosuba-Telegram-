@@ -15,7 +15,7 @@ async function handleDownloader(ctx, action) {
 
   if (prompts[action]) {
     const [title, body] = prompts[action];
-    return reply(`${title}\n\n${body}\n\n⚠️ _Free downloader — quality may vary. Send the URL as a plain text message\\._`, KB.downloaderMenu());
+    return reply(`${title}\n\n${body}\n\n⚠️ _Free downloader - quality may vary. Send the URL as a plain text message\\._`, KB.downloaderMenu());
   }
 
   return reply(
@@ -25,7 +25,7 @@ async function handleDownloader(ctx, action) {
 }
 
 async function handleDownloaderUrl(ctx, url) {
-  const ytRe = /(?:youtu\\.be\\/|youtube\\.com\\/watch\\?v=)([\w-]+)/i;
+  const ytRe = /(?:youtu\.be\/|youtube\.com\/watch\?v=)([\w-]+)/i;
   const ttRe = /tiktok\\.com/i;
   const igRe = /instagram\\.com/i;
   const fbRe = /facebook\\.com|fb\\.watch/i;
