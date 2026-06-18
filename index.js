@@ -58,16 +58,22 @@ async function launch() {
   const port = parseInt(process.env.PORT || "3000");
 
   if (webhookUrl) {
-    await bot.launch({ webhook: { domain: webhookUrl, port } });
+    await bot.launch({
+      webhook: {
+        domain: webhookUrl,
+        port,
+        secretPath: `/telegraf/${token}`,
+      }
+    });
     console.log(`🌊 Aqua Bot launched via webhook on port ${port}`);
-    console.log(`🔗 Webhook: ${webhookUrl}`);
+    console.log(`🔗 Webhook: ${webhookUrl}/telegraf/${token}`);
   } else {
     await bot.launch();
     console.log("🌊 Aqua Bot launched via long-polling");
   }
 
   console.log(`✅ Bot: @${bot.botInfo?.username || "Aqua"}`);
-}
+        }
 
 launch().catch((err) => {
   console.error("Failed to launch bot:", err);
