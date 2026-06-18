@@ -13,18 +13,27 @@ const { handleCards } = require("./commands/cards");
 const { handleVibe } = require("./commands/vibe");
 const { handleMedia } = require("./commands/media");
 const { handleAdmin } = require("./commands/admin");
+const { handleCasino } = require("./commands/casino");
+const { handleOwner, isOwner } = require("./commands/owner");
 const { MARKET_ITEMS, formatNumber, capitalize } = require("./utils/helpers");
 
 const CS = process.env.CURRENCY_SYMBOL || "💎";
 const PREFIX = process.env.BOT_PREFIX || ".";
+
+// Helper: reply quoting the user's message
+function quotedReply(ctx, text, kb) {
+  const msgId = ctx.message?.message_id;
+  return ctx.reply(text, { parse_mode: "Markdown", ...(kb || {}), ...(msgId ? { reply_to_message_id: msgId } : {}) });
+}
 
 async function handleCallback(ctx) {
   const data = ctx.callbackQuery?.data;
   if (!data) return;
   await ctx.answerCbQuery().catch(() => {});
 
-  const [prefix, ...rest] = data.split("_");
-  const action = rest.join("_");
+  const firstUnderscore = data.indexOf("_");
+  const prefix = firstUnderscore >= 0 ? data.slice(0, firstUnderscore) : data;
+  const action = firstUnderscore >= 0 ? data.slice(firstUnderscore + 1) : "";
 
   switch (prefix) {
     case "menu":
@@ -40,11 +49,14 @@ async function handleCallback(ctx) {
     case "game":
       return handleGames(ctx, action);
     case "poke":
+      // poke_starter_bulbasaur -> action = "starter_bulbasaur"
       return handlePokemon(ctx, action);
     case "starter":
       return handlePokemon(ctx, `starter_${action}`);
     case "catch":
       return handlePokemon(ctx, `catch_${action}`);
+    case "casino":
+      return handleCasino(ctx, action);
     case "dl":
       return handleDownloader(ctx, action);
     case "rpg":
@@ -60,46 +72,48 @@ async function handleCallback(ctx) {
     case "adm":
       return handleAdmin(ctx, action);
     default:
-      return ctx.answerCbQuery("❓ Unknown action").catch(() => {});
+      return ctx.answerCbQuery("Unknown action").catch(() => {});
   }
 }
 
 async function handleMenuNav(ctx, menu) {
-  const edit = (t, kb) => ctx.editMessageText(t, { parse_mode: "Markdown", ...kb }).catch(() => ctx.reply(t, { parse_mode: "Markdown", ...kb }));
+  const send = (t, kb) => ctx.reply(t, { parse_mode: "Markdown", ...(kb || {}) });
 
   switch (menu) {
     case "main":
-      return edit("🌊 *Aqua Bot Menu*\n\nChoose a category below:", KB.mainMenu());
+      return send("Aqua Bot Menu\n\nChoose a category below:", KB.mainMenu());
     case "admin":
-      return edit("⚙️ *Admin Commands*\n\nReply to a user or mention them for target-based commands:", KB.adminMenu());
+      return send("Admin Commands\n\nReply to a user or mention them for target-based commands:", KB.adminMenu());
     case "economy":
-      return edit("💰 *Economy*\n\nEarn, spend, and manage your coins:", KB.economyMenu());
+      return send("Economy\n\nEarn, spend, and manage your coins:", KB.economyMenu());
     case "gambling":
-      return edit("🎲 *Gambling*\n\nTry your luck — all bets from wallet:", KB.gamblingMenu());
+      return send("Gambling\n\nTry your luck - all bets from wallet:", KB.gamblingMenu());
+    case "casino":
+      return send("Casino\n\nVisual casino games with interactive buttons:", KB.casinoMenu());
     case "fun":
-      return edit("🎉 *Fun Commands*\n\nJokes, quotes, facts & games:", KB.funMenu());
+      return send("Fun Commands\n\nJokes, quotes, facts & games:", KB.funMenu());
     case "interactions":
-      return edit("💞 *Interactions*\n\nReact to users — reply to a message or tag someone:", KB.interactionsMenu());
+      return send("Interactions\n\nReact to users - reply to a message or tag someone:", KB.interactionsMenu());
     case "games":
-      return edit("🎮 *Games*\n\nPlay mini-games below:", KB.gamesMenu());
+      return send("Games\n\nPlay mini-games below:", KB.gamesMenu());
     case "pokemon":
-      return edit("🐾 *Pokémon*\n\nCatch, train, and battle Pokémon!", KB.pokemonMenu());
+      return send("Pokemon\n\nCatch, train, and battle Pokemon!", KB.pokemonMenu());
     case "downloader":
-      return edit("⬇️ *Downloader*\n\nDownload media from popular platforms:", KB.downloaderMenu());
+      return send("Downloader\n\nDownload media from popular platforms:", KB.downloaderMenu());
     case "rpg":
-      return edit("⚔️ *RPG*\n\nHunt monsters, level up, and forge gear:", KB.rpgMenu());
+      return send("RPG\n\nHunt monsters, level up, and forge gear:", KB.rpgMenu());
     case "guild":
-      return edit("🏰 *Guild System*\n\nCreate or manage your guild:", KB.guildMenu());
+      return send("Guild System\n\nCreate or manage your guild:", KB.guildMenu());
     case "cards":
-      return edit("🎴 *Card Collection*\n\nCollect, trade, and build your deck:", KB.cardsMenu());
+      return send("Card Collection\n\nCollect, trade, and build your deck:", KB.cardsMenu());
     case "vibe":
-      return edit("🔥 *Vibe Check*\n\nCheck your energy and aura:", KB.vibeMenu());
+      return send("Vibe Check\n\nCheck your energy and aura:", KB.vibeMenu());
     case "media":
-      return edit("📱 *Media Tools*\n\nEnhance and edit images:", KB.mediaMenu());
+      return send("Media Tools\n\nEnhance and edit images:", KB.mediaMenu());
     case "payments":
-      return edit("💸 *Payments*\n\nQuick access to balance and transfers:", KB.paymentsMenu());
+      return send("Payments\n\nQuick access to balance and transfers:", KB.paymentsMenu());
     default:
-      return edit("🌊 *Aqua Bot Menu*", KB.mainMenu());
+      return send("Aqua Bot Menu", KB.mainMenu());
   }
 }
 
@@ -111,13 +125,24 @@ async function handleCommand(ctx) {
   const parts = withoutPrefix.split(/\s+/);
   const cmd = parts[0]?.toLowerCase();
   const args = parts.slice(1);
+  const msgId = ctx.message?.message_id;
+
+  // Check if user is bot-banned
+  const user = DB.getUser(String(ctx.from.id));
+  if (user.banned && cmd !== "start") {
+    return ctx.reply("You are banned from using this bot.", { reply_to_message_id: msgId });
+  }
+
+  // Save user name
+  DB.saveUser(String(ctx.from.id), { name: ctx.from.first_name || ctx.from.username || "User" });
 
   switch (cmd) {
     case "start":
     case "menu":
     case "help":
-      return ctx.reply("🌊 *Aqua Bot — Menu*\n\nHello! I'm *Aqua* from KONOSUBA! 💙\n\nUse the menu below to explore all my features!", { parse_mode: "Markdown", ...KB.mainMenu() });
+      return ctx.reply("Aqua Bot - Menu\n\nHello! I'm *Aqua* from KONOSUBA!\n\nUse the menu below to explore all my features!", { parse_mode: "Markdown", ...KB.mainMenu(), reply_to_message_id: msgId });
 
+    // ─── ECONOMY ──────────────────────────────────────────────
     case "balance": case "bal":   return handleEconomy(ctx, "balance");
     case "profile": case "me":    return handleEconomy(ctx, "profile");
     case "rank":                  return handleEconomy(ctx, "rank");
@@ -140,42 +165,83 @@ async function handleCommand(ctx) {
     case "prestige":              return handleEconomy(ctx, "prestige");
 
     case "pay": case "transfer": {
-      const amount = parseInt(args[1]);
+      const amount = parseInt(args[0]);
       const eco = DB.getEconomy(String(ctx.from.id));
       const target = ctx.message.reply_to_message?.from;
-      if (!target) return ctx.reply(`❌ Reply to a message to transfer. Usage: \`${PREFIX}pay @user 100\``, { parse_mode: "Markdown" });
-      if (!amount || amount < 1) return ctx.reply("❌ Invalid amount.");
-      if (eco.wallet < amount) return ctx.reply(`❌ Not enough ${CS} in wallet. You have ${CS} ${formatNumber(eco.wallet)}`);
-      if (target.id === ctx.from.id) return ctx.reply("❌ Can't pay yourself.");
+      if (!target) return quotedReply(ctx, `Reply to a message to transfer.\nUsage: reply + \`${PREFIX}pay 100\``);
+      if (!amount || amount < 1) return quotedReply(ctx, "Invalid amount.");
+      if (eco.wallet < amount) return quotedReply(ctx, `Not enough ${CS} in wallet. You have ${CS} ${formatNumber(eco.wallet)}`);
+      if (target.id === ctx.from.id) return quotedReply(ctx, "Can't pay yourself.");
       const tid = String(target.id);
       const teco = DB.getEconomy(tid);
       DB.saveEconomy(String(ctx.from.id), { wallet: eco.wallet - amount });
       DB.saveEconomy(tid, { wallet: teco.wallet + amount });
-      return ctx.reply(`✅ Transferred ${CS} ${formatNumber(amount)} to *${target.first_name}*!`, { parse_mode: "Markdown" });
+      return quotedReply(ctx, `Transferred ${CS} ${formatNumber(amount)} to *${target.first_name}*!`);
     }
 
     case "buy": {
       const itemName = args.join(" ");
-      if (!itemName) return ctx.reply(`❌ Usage: \`${PREFIX}buy <item name>\`\n\nUse \`${PREFIX}market\` to see available items.`, { parse_mode: "Markdown" });
+      if (!itemName) return quotedReply(ctx, `Usage: \`${PREFIX}buy <item name>\`\n\nUse \`${PREFIX}market\` to see available items.`);
       const item = MARKET_ITEMS.find(i => i.name.toLowerCase() === itemName.toLowerCase());
-      if (!item) return ctx.reply(`❌ Item *${itemName}* not found.\n\nUse \`${PREFIX}market\` to see items.`, { parse_mode: "Markdown" });
+      if (!item) return quotedReply(ctx, `Item *${itemName}* not found.\n\nUse \`${PREFIX}market\` to see items.`);
       const eco = DB.getEconomy(String(ctx.from.id));
-      if (eco.wallet < item.price) return ctx.reply(`❌ Need ${CS} ${formatNumber(item.price)}.\nYour wallet: ${CS} ${formatNumber(eco.wallet)}`);
+      if (eco.wallet < item.price) return quotedReply(ctx, `Need ${CS} ${formatNumber(item.price)}.\nYour wallet: ${CS} ${formatNumber(eco.wallet)}`);
       DB.saveEconomy(String(ctx.from.id), { wallet: eco.wallet - item.price });
       DB.addItem(String(ctx.from.id), item.name);
-      return ctx.reply(`✅ Purchased *${item.name}* for ${CS} ${formatNumber(item.price)}!\n\n_${item.desc}_`, { parse_mode: "Markdown", ...KB.back("economy") });
+      return quotedReply(ctx, `Purchased *${item.name}* for ${CS} ${formatNumber(item.price)}!\n\n_${item.desc}_`, KB.back("economy"));
     }
 
-    case "give": case "addmoney": {
-      if (String(ctx.from.id) !== process.env.OWNER_ID) return ctx.reply("❌ Owner only.");
-      const target = ctx.message.reply_to_message?.from;
-      const amount = parseInt(args[0]) || parseInt(args[1]);
-      if (!target || !amount) return ctx.reply(`❌ Usage: reply to a message and use \`${PREFIX}give 500\``);
-      const teco = DB.getEconomy(String(target.id));
-      DB.saveEconomy(String(target.id), { wallet: teco.wallet + amount });
-      return ctx.reply(`✅ Added ${CS} ${formatNumber(amount)} to *${target.first_name}*'s wallet.`, { parse_mode: "Markdown" });
+    case "sell": {
+      const itemName = args.slice(0, -1).join(" ") || args.join(" ");
+      const qty = parseInt(args[args.length - 1]) || 1;
+      if (!itemName) return quotedReply(ctx, `Usage: \`${PREFIX}sell <item name> [quantity]\``);
+      const item = MARKET_ITEMS.find(i => i.name.toLowerCase() === itemName.toLowerCase());
+      if (!item) return quotedReply(ctx, `Item not found.`);
+      const inv = DB.getInventory(String(ctx.from.id));
+      if (!inv[item.name] || inv[item.name] < qty) return quotedReply(ctx, `You don't have enough *${item.name}*.`);
+      for (let i = 0; i < qty; i++) DB.removeItem(String(ctx.from.id), item.name);
+      const sellPrice = Math.floor(item.price * 0.5 * qty);
+      const eco = DB.getEconomy(String(ctx.from.id));
+      DB.saveEconomy(String(ctx.from.id), { wallet: eco.wallet + sellPrice });
+      return quotedReply(ctx, `Sold ${qty}x *${item.name}* for ${CS} ${formatNumber(sellPrice)}!`);
     }
 
+    // ─── GAMBLING ──────────────────────────────────────────────
+    case "coinflip": case "cf": {
+      const amount = parseInt(args[0]) || 100;
+      return handleGambling(ctx, `coinflip_${amount}`);
+    }
+    case "slots": {
+      const amount = parseInt(args[0]) || 100;
+      return handleGambling(ctx, `slots_${amount}`);
+    }
+    case "blackjack": case "bj": {
+      const amount = parseInt(args[0]);
+      if (!amount) return handleCasino(ctx, "bj_0");
+      return handleCasino(ctx, `bj_${amount}`);
+    }
+    case "roulette": case "rou": {
+      const amount = parseInt(args[0]) || 0;
+      return handleCasino(ctx, `roulette_${amount}`);
+    }
+    case "dice": {
+      const amount = parseInt(args[0]) || 0;
+      return handleCasino(ctx, `dice_${amount}`);
+    }
+    case "slots": {
+      const amount = parseInt(args[0]) || 0;
+      return handleCasino(ctx, `slots_${amount}`);
+    }
+    case "crash": {
+      const amount = parseInt(args[0]) || 100;
+      return handleGambling(ctx, `crash_${amount}`);
+    }
+    case "lottery":
+      return handleGambling(ctx, "lottery");
+    case "casino":
+      return ctx.reply("Casino Games\n\nChoose a game below!", { parse_mode: "Markdown", ...KB.casinoMenu(), reply_to_message_id: msgId });
+
+    // ─── FUN ──────────────────────────────────────────────────
     case "joke":    return handleFun(ctx, "joke");
     case "quote":   return handleFun(ctx, "quote");
     case "fact":    return handleFun(ctx, "fact");
@@ -185,6 +251,7 @@ async function handleCommand(ctx) {
     case "8ball":   return handleFun(ctx, "8ball", args);
     case "rps":     return handleFun(ctx, `rps_${args[0] || "rock"}`);
 
+    // ─── INTERACTIONS ─────────────────────────────────────────
     case "hug":      return handleInteractions(ctx, "hug");
     case "kiss":     return handleInteractions(ctx, "kiss");
     case "pat":      return handleInteractions(ctx, "pat");
@@ -205,6 +272,7 @@ async function handleCommand(ctx) {
     case "angry":    return handleInteractions(ctx, "angry");
     case "sleep":    return handleInteractions(ctx, "sleep");
 
+    // ─── GAMES ────────────────────────────────────────────────
     case "hangman":     return handleGames(ctx, "hangman");
     case "riddle":      return handleGames(ctx, "riddle");
     case "trivia":      return handleGames(ctx, "trivia");
@@ -216,22 +284,43 @@ async function handleCommand(ctx) {
     case "arcade":      return handleGames(ctx, "arcade");
     case "leaderboard": return handleGames(ctx, "leaderboard");
 
-    case "pokedex": case "dex":
-      if (!args[0]) return ctx.reply(`❌ Usage: \`${PREFIX}dex <pokemon name>\``, { parse_mode: "Markdown" });
-      return handlePokemon(ctx, `dex_${args[0]}`);
-    case "party":    return handlePokemon(ctx, "party");
-    case "pc":       return handlePokemon(ctx, "pc");
-    case "hunt": {
-      if (!ctx.message.text.includes("poke") && !ctx.message.text.includes("pokemon")) break;
-      return handlePokemon(ctx, "hunt");
-    }
-    case "pokeheal": return handlePokemon(ctx, "heal");
-    case "starter":  return handlePokemon(ctx, "starter");
-    case "pokeshop": return handlePokemon(ctx, "shop");
+    // ─── POKEMON ──────────────────────────────────────────────
+    case "starter":
+      return handlePokemon(ctx, "starter");
 
+    case "hunt": case "pokehunt":
+      return handlePokemon(ctx, "hunt");
+
+    case "catch": case "pokecatch":
+      return handlePokemon(ctx, "catch");
+
+    case "party": {
+      if (args[0]) return handlePokemon(ctx, `party_${args[0]}`);
+      return handlePokemon(ctx, "party");
+    }
+
+    case "pc":
+      return handlePokemon(ctx, "pc");
+
+    case "pokedex": case "dex": {
+      if (!args[0]) return quotedReply(ctx, `Usage: \`${PREFIX}dex <pokemon name>\``);
+      return handlePokemon(ctx, `dex_${args[0].toLowerCase()}`);
+    }
+
+    case "pokeheal": case "heal":
+      return handlePokemon(ctx, "heal");
+
+    case "pokeshop":
+      return handlePokemon(ctx, "shop");
+
+    case "pokemon":
+      return ctx.reply("Pokemon Menu", { parse_mode: "Markdown", ...KB.pokemonMenu(), reply_to_message_id: msgId });
+
+    // ─── DOWNLOADER ───────────────────────────────────────────
     case "ytmp3": case "ytmp4": case "tiktok": case "instagram": case "facebook":
       return handleDownloader(ctx, `${cmd}_prompt`);
 
+    // ─── RPG ──────────────────────────────────────────────────
     case "rpgstats": case "stats": return handleRpg(ctx, "stats");
     case "rpghunt":  return handleRpg(ctx, "hunt");
     case "boss":     return handleRpg(ctx, "boss");
@@ -243,6 +332,7 @@ async function handleCommand(ctx) {
     case "rpgshop":  return handleRpg(ctx, "shop");
     case "myparty":  return handleRpg(ctx, "party");
 
+    // ─── GUILD ────────────────────────────────────────────────
     case "createguild":
     case "joinguild":
     case "leaveguild":
@@ -251,10 +341,12 @@ async function handleCommand(ctx) {
     case "guild":      return handleGuild(ctx, "info");
     case "topguilds":  return handleGuild(ctx, "top");
 
+    // ─── CARDS ────────────────────────────────────────────────
     case "cards": case "collection": return handleCards(ctx, "collection");
     case "deck":                     return handleCards(ctx, "deck");
     case "stardust":                 return handleCards(ctx, "stardust");
 
+    // ─── VIBE ─────────────────────────────────────────────────
     case "vibe":      return handleVibe(ctx, "vibe");
     case "vibecheck": return handleVibe(ctx, "vibecheck");
     case "energy":    return handleVibe(ctx, "energy");
@@ -271,6 +363,7 @@ async function handleCommand(ctx) {
     case "sus":       return handleVibe(ctx, "sus");
     case "clout":     return handleVibe(ctx, "clout");
 
+    // ─── ADMIN ────────────────────────────────────────────────
     case "kick":       return handleAdmin(ctx, "kick",       args);
     case "ban":        return handleAdmin(ctx, "ban",        args);
     case "unban":      return handleAdmin(ctx, "unban",      args);
@@ -288,9 +381,136 @@ async function handleCommand(ctx) {
     case "stafflist":  return handleAdmin(ctx, "stafflist");
     case "myrole":     return handleAdmin(ctx, "myrole");
 
+    // ─── OWNER COMMANDS (only shown/executed if owner) ────────
+    case "give": case "addcoins":
+      return handleOwner(ctx, "give", args);
+    case "take": case "removecoins":
+      return handleOwner(ctx, "take", args);
+    case "setcoins":
+      return handleOwner(ctx, "setcoins", args);
+    case "addbank":
+      return handleOwner(ctx, "addbank", args);
+    case "reseteconomy":
+      return handleOwner(ctx, "reseteconomy", args);
+    case "addxp":
+      return handleOwner(ctx, "addxp", args);
+    case "setlevel":
+      return handleOwner(ctx, "setlevel", args);
+    case "setprestige":
+      return handleOwner(ctx, "setprestige", args);
+    case "givepokemon":
+      return handleOwner(ctx, "givepokemon", args);
+    case "setpokemonlevel":
+      return handleOwner(ctx, "setpokemonlevel", args);
+    case "clearparty":
+      return handleOwner(ctx, "clearparty", args);
+    case "clearpc":
+      return handleOwner(ctx, "clearpc", args);
+    case "giveballs":
+      return handleOwner(ctx, "giveballs", args);
+    case "givemasterball":
+      return handleOwner(ctx, "givemasterball", args);
+    case "giveitem":
+      return handleOwner(ctx, "giveitem", args);
+    case "resetpokedex":
+      return handleOwner(ctx, "resetpokedex", args);
+    case "resetpokemon":
+      return handleOwner(ctx, "resetpokemon", args);
+    case "resetuser":
+      return handleOwner(ctx, "resetuser", args);
+    case "botban":
+      return handleOwner(ctx, "botban", args);
+    case "botunban":
+      return handleOwner(ctx, "botunban", args);
+    case "userinfo":
+      return handleOwner(ctx, "userinfo", args);
+    case "allusers":
+      return handleOwner(ctx, "allusers", args);
+    case "allgroups":
+      return handleOwner(ctx, "allgroups", args);
+    case "topbalance":
+      return handleOwner(ctx, "topbalance", args);
+    case "clearcooldowns":
+      return handleOwner(ctx, "clearcooldowns", args);
+    case "clearallcooldowns":
+      return handleOwner(ctx, "clearallcooldowns", args);
+    case "clearinventory":
+      return handleOwner(ctx, "clearinventory", args);
+    case "clearwarnings":
+      return handleOwner(ctx, "clearwarnings", args);
+    case "broadcast":
+      return handleOwner(ctx, "broadcast", args);
+    case "groupbroadcast":
+      return handleOwner(ctx, "groupbroadcast", args);
+    case "join":
+      return handleOwner(ctx, "join", args);
+    case "leave":
+      return handleOwner(ctx, "leave", args);
+    case "ping":
+      return handleOwner(ctx, "ping", args);
+    case "uptime":
+      return handleOwner(ctx, "uptime", args);
+    case "botstats":
+      return handleOwner(ctx, "stats", args);
+    case "eval":
+      return handleOwner(ctx, "eval", args);
+    case "shell":
+      return handleOwner(ctx, "shell", args);
+    case "restart":
+      return handleOwner(ctx, "restart", args);
+    case "sendmessage":
+      return handleOwner(ctx, "sendmessage", args);
+    case "setbotname":
+      return handleOwner(ctx, "setbotname", args);
+    case "setbotdesc":
+      return handleOwner(ctx, "setbotdesc", args);
+    case "setbotshortdesc":
+      return handleOwner(ctx, "setbotshortdesc", args);
+    case "getchatid":
+      return handleOwner(ctx, "getchatid", args);
+    case "chatinfo":
+      return handleOwner(ctx, "chatinfo", args);
+    case "admins":
+      return handleOwner(ctx, "admins", args);
+    case "invite":
+      return handleOwner(ctx, "invite", args);
+    case "lockgroup":
+      return handleOwner(ctx, "lockgroup", args);
+    case "unlockgroup":
+      return handleOwner(ctx, "unlockgroup", args);
+    case "pinmessage":
+      return handleOwner(ctx, "pinmessage", args);
+    case "unpinall":
+      return handleOwner(ctx, "unpinall", args);
+    case "deletedb":
+      return handleOwner(ctx, "deletedb", args);
+    case "setcurrency":
+      return handleOwner(ctx, "setcurrency", args);
+    case "setprefix":
+      return handleOwner(ctx, "setprefix", args);
+    case "setwelcome":
+      return handleOwner(ctx, "setwelcome", args);
+    case "welcome_on":
+      return handleOwner(ctx, "welcome_on", args);
+    case "welcome_off":
+      return handleOwner(ctx, "welcome_off", args);
+    case "antilink_on":
+      return handleOwner(ctx, "antilink_on", args);
+    case "antilink_off":
+      return handleOwner(ctx, "antilink_off", args);
+    case "anticap_on":
+      return handleOwner(ctx, "anticap_on", args);
+    case "anticap_off":
+      return handleOwner(ctx, "anticap_off", args);
+    case "antispam_on":
+      return handleOwner(ctx, "antispam_on", args);
+    case "antispam_off":
+      return handleOwner(ctx, "antispam_off", args);
+    case "ownerhelp":
+      return handleOwner(ctx, "ownerhelp", args);
+
     default: return false;
   }
-  return false;
 }
 
 async function handleTextMessage(ctx) {
@@ -305,8 +525,10 @@ async function handleTextMessage(ctx) {
   const chatId = String(ctx.chat.id);
   const gameResult = checkGameAnswer(text, chatId);
   if (gameResult) {
-    DB.saveUser(String(ctx.from.id), { xp: (DB.getUser(String(ctx.from.id)).xp || 0) + 25 });
-    return ctx.reply(`*${ctx.from.first_name}* — ${gameResult}`, { parse_mode: "Markdown" });
+    const uid = String(ctx.from.id);
+    const u = DB.getUser(uid);
+    DB.saveUser(uid, { xp: (u.xp || 0) + 25 });
+    return ctx.reply(`*${ctx.from.first_name}* - ${gameResult}`, { parse_mode: "Markdown", reply_to_message_id: ctx.message.message_id });
   }
 
   if (/https?:\/\//i.test(text)) {

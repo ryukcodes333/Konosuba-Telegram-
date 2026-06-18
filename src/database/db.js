@@ -16,6 +16,9 @@ const FILES = {
   lottery:      path.join(DB_PATH, "lottery.json"),
   achievements: path.join(DB_PATH, "achievements.json"),
   chatSettings: path.join(DB_PATH, "chatSettings.json"),
+  wildEncounter: path.join(DB_PATH, "wildEncounter.json"),
+  battles:      path.join(DB_PATH, "battles.json"),
+  pokedexSeen:  path.join(DB_PATH, "pokedexSeen.json"),
 };
 
 if (!fs.existsSync(DB_PATH)) fs.mkdirSync(DB_PATH, { recursive: true });
@@ -51,6 +54,7 @@ const DB = {
     return g[id];
   },
   saveGroup(id, data) { const g = load(FILES.groups); g[id] = { ...g[id], ...data }; save(FILES.groups, g); },
+  getAllGroups() { return load(FILES.groups); },
 
   getCooldown(id, cmd) { const c = load(FILES.cooldowns); return c[`${id}:${cmd}`] || 0; },
   setCooldown(id, cmd, ms) { const c = load(FILES.cooldowns); c[`${id}:${cmd}`] = Date.now() + ms; save(FILES.cooldowns, c); },
@@ -70,8 +74,27 @@ const DB = {
   setChatSetting(chatId, key, value) { const s = load(FILES.chatSettings); if (!s[chatId]) s[chatId] = {}; s[chatId][key] = value; save(FILES.chatSettings, s); },
   getChatSettings(chatId) { const s = load(FILES.chatSettings); return s[chatId] || {}; },
 
-  getPokemon(id) { const p = load(FILES.pokemon); if (!p[id]) { p[id] = { party: [], pc: [], starter: null, buddy: null }; save(FILES.pokemon, p); } return p[id]; },
+  getPokemon(id) {
+    const p = load(FILES.pokemon);
+    if (!p[id]) { p[id] = { party: [], pc: [], starter: null, buddy: null, oakStep: 0, pokedex: [], badges: 0, friendships: {} }; save(FILES.pokemon, p); }
+    if (!p[id].oakStep) p[id].oakStep = 0;
+    if (!p[id].pokedex) p[id].pokedex = [];
+    if (!p[id].badges) p[id].badges = 0;
+    if (!p[id].friendships) p[id].friendships = {};
+    return p[id];
+  },
   savePokemon(id, data) { const p = load(FILES.pokemon); p[id] = { ...p[id], ...data }; save(FILES.pokemon, p); },
+
+  getWildEncounter(id) { const w = load(FILES.wildEncounter); return w[id] || null; },
+  saveWildEncounter(id, data) { const w = load(FILES.wildEncounter); w[id] = data; save(FILES.wildEncounter, w); },
+  clearWildEncounter(id) { const w = load(FILES.wildEncounter); delete w[id]; save(FILES.wildEncounter, w); },
+
+  getBattleState(id) { const b = load(FILES.battles); return b[id] || null; },
+  saveBattleState(id, data) { const b = load(FILES.battles); b[id] = data; save(FILES.battles, b); },
+  clearBattleState(id) { const b = load(FILES.battles); delete b[id]; save(FILES.battles, b); },
+
+  getPokedexSeen(id) { const p = load(FILES.pokedexSeen); return p[id] || []; },
+  addPokedexEntry(id, pokeId) { const p = load(FILES.pokedexSeen); if (!p[id]) p[id] = []; if (!p[id].includes(pokeId)) { p[id].push(pokeId); save(FILES.pokedexSeen, p); } },
 
   getGuild(name) { const g = load(FILES.guilds); return g[name.toLowerCase()] || null; },
   saveGuild(name, data) { const g = load(FILES.guilds); g[name.toLowerCase()] = data; save(FILES.guilds, g); },

@@ -4,12 +4,13 @@ const KB = {
   mainMenu: () =>
     Markup.inlineKeyboard([
       [Markup.button.callback("⚙️ Admin", "menu_admin"), Markup.button.callback("💰 Economy", "menu_economy")],
-      [Markup.button.callback("🎲 Gambling", "menu_gambling"), Markup.button.callback("🎉 Fun", "menu_fun")],
-      [Markup.button.callback("💞 Interactions", "menu_interactions"), Markup.button.callback("🎮 Games", "menu_games")],
-      [Markup.button.callback("🐾 Pokémon", "menu_pokemon"), Markup.button.callback("⬇️ Downloader", "menu_downloader")],
-      [Markup.button.callback("⚔️ RPG", "menu_rpg"), Markup.button.callback("🏰 Guild", "menu_guild")],
-      [Markup.button.callback("🎴 Cards", "menu_cards"), Markup.button.callback("🔥 Vibe", "menu_vibe")],
-      [Markup.button.callback("📱 Media", "menu_media"), Markup.button.callback("💸 Payments", "menu_payments")],
+      [Markup.button.callback("🎲 Gambling", "menu_gambling"), Markup.button.callback("🎰 Casino", "menu_casino")],
+      [Markup.button.callback("🎉 Fun", "menu_fun"), Markup.button.callback("💞 Interactions", "menu_interactions")],
+      [Markup.button.callback("🎮 Games", "menu_games"), Markup.button.callback("🐾 Pokemon", "menu_pokemon")],
+      [Markup.button.callback("⬇️ Downloader", "menu_downloader"), Markup.button.callback("⚔️ RPG", "menu_rpg")],
+      [Markup.button.callback("🏰 Guild", "menu_guild"), Markup.button.callback("🎴 Cards", "menu_cards")],
+      [Markup.button.callback("🔥 Vibe", "menu_vibe"), Markup.button.callback("📱 Media", "menu_media")],
+      [Markup.button.callback("💸 Payments", "menu_payments")],
     ]),
 
   back: (target = "main") =>
@@ -58,6 +59,14 @@ const KB = {
       [Markup.button.callback("🔙 Back", "menu_main")],
     ]),
 
+  casinoMenu: () =>
+    Markup.inlineKeyboard([
+      [Markup.button.callback("🃏 Blackjack", "casino_bj_0"), Markup.button.callback("🎰 Slots", "casino_slots_0")],
+      [Markup.button.callback("🎡 Roulette", "casino_roulette_0"), Markup.button.callback("🪙 Coin Flip", "casino_coinflip_0")],
+      [Markup.button.callback("🎲 Dice", "casino_dice_0")],
+      [Markup.button.callback("🔙 Back", "menu_main")],
+    ]),
+
   funMenu: () =>
     Markup.inlineKeyboard([
       [Markup.button.callback("😂 Joke", "fun_joke"), Markup.button.callback("💬 Quote", "fun_quote"), Markup.button.callback("🧠 Fact", "fun_fact")],
@@ -91,29 +100,81 @@ const KB = {
 
   pokemonMenu: () =>
     Markup.inlineKeyboard([
-      [Markup.button.callback("🎮 My Pokémon", "poke_party"), Markup.button.callback("💾 PC Storage", "poke_pc")],
-      [Markup.button.callback("🌿 Hunt/Catch", "poke_hunt"), Markup.button.callback("💊 Heal Party", "poke_heal")],
-      [Markup.button.callback("🌟 Choose Starter", "poke_starter"), Markup.button.callback("🏪 PokéShop", "poke_shop")],
+      [Markup.button.callback("🎮 My Party", "poke_party"), Markup.button.callback("💾 PC Storage", "poke_pc")],
+      [Markup.button.callback("🌿 Hunt", "poke_hunt"), Markup.button.callback("🎣 Catch", "poke_catch")],
+      [Markup.button.callback("💊 Heal Party", "poke_heal"), Markup.button.callback("🌟 Starter", "poke_starter")],
+      [Markup.button.callback("🏪 PokéShop", "poke_shop")],
       [Markup.button.callback("🔙 Back", "menu_main")],
     ]),
 
-  pokemonStarterMenu: () =>
+  kantoStarterMenu: () =>
     Markup.inlineKeyboard([
-      [Markup.button.callback("🌿 Bulbasaur", "starter_bulbasaur"), Markup.button.callback("🔥 Charmander", "starter_charmander"), Markup.button.callback("💧 Squirtle", "starter_squirtle")],
-      [Markup.button.callback("🌿 Chikorita", "starter_chikorita"), Markup.button.callback("🔥 Cyndaquil", "starter_cyndaquil"), Markup.button.callback("💧 Totodile", "starter_totodile")],
-      [Markup.button.callback("🌿 Treecko", "starter_treecko"), Markup.button.callback("🔥 Torchic", "starter_torchic"), Markup.button.callback("💧 Mudkip", "starter_mudkip")],
-      [Markup.button.callback("🌿 Turtwig", "starter_turtwig"), Markup.button.callback("🔥 Chimchar", "starter_chimchar"), Markup.button.callback("💧 Piplup", "starter_piplup")],
-      [Markup.button.callback("🌿 Snivy", "starter_snivy"), Markup.button.callback("🔥 Tepig", "starter_tepig"), Markup.button.callback("💧 Oshawott", "starter_oshawott")],
-      [Markup.button.callback("🌿 Rowlet", "starter_rowlet"), Markup.button.callback("🔥 Litten", "starter_litten"), Markup.button.callback("💧 Popplio", "starter_popplio")],
-      [Markup.button.callback("🌿 Grookey", "starter_grookey"), Markup.button.callback("🔥 Scorbunny", "starter_scorbunny"), Markup.button.callback("💧 Sobble", "starter_sobble")],
+      [
+        Markup.button.callback("🌱 Bulbasaur", "poke_starter_bulbasaur"),
+        Markup.button.callback("🔥 Charmander", "poke_starter_charmander"),
+        Markup.button.callback("💧 Squirtle", "poke_starter_squirtle"),
+      ],
+      [Markup.button.callback("🔙 Back", "menu_pokemon")],
+    ]),
+
+  nextButton: (action) =>
+    Markup.inlineKeyboard([[Markup.button.callback("▶ Next", `poke_${action}`)]]),
+
+  catchMenu: () =>
+    Markup.inlineKeyboard([
+      [Markup.button.callback("⚪ Poke Ball", "poke_catch_poke"), Markup.button.callback("🔵 Great Ball", "poke_catch_great")],
+      [Markup.button.callback("🟣 Ultra Ball", "poke_catch_ultra"), Markup.button.callback("⚪ Master Ball", "poke_catch_master")],
       [Markup.button.callback("🔙 Back", "menu_pokemon")],
     ]),
 
   pokeBallMenu: () =>
     Markup.inlineKeyboard([
-      [Markup.button.callback("🔵 Use Poké Ball", "catch_poke"), Markup.button.callback("🔵 Use Great Ball", "catch_great")],
-      [Markup.button.callback("🔵 Use Ultra Ball", "catch_ultra"), Markup.button.callback("⚪ Use Master Ball", "catch_master")],
+      [Markup.button.callback("⚪ Poke Ball", "catch_poke"), Markup.button.callback("🔵 Great Ball", "catch_great")],
+      [Markup.button.callback("🟣 Ultra Ball", "catch_ultra"), Markup.button.callback("⚪ Master Ball", "catch_master")],
       [Markup.button.callback("🔙 Back", "menu_pokemon")],
+    ]),
+
+  // ─── CASINO KEYBOARDS ─────────────────────────────────────────────────────
+
+  bjActions: (userId) =>
+    Markup.inlineKeyboard([
+      [Markup.button.callback("🃏 Hit", `casino_bjhit_${userId}`), Markup.button.callback("✋ Stand", `casino_bjstand_${userId}`)],
+    ]),
+
+  slotsAgain: (amount) =>
+    Markup.inlineKeyboard([
+      [Markup.button.callback("🎰 Spin Again", `casino_slots_${amount}`), Markup.button.callback("🔙 Back", "menu_casino")],
+    ]),
+
+  rouletteColors: (amount, num, isRed, isGreen, isBlack) => {
+    if (num === undefined) {
+      return Markup.inlineKeyboard([
+        [Markup.button.callback("🔴 Red (2x)", `casino_roubet_red-${amount}-0-0-0`), Markup.button.callback("⚫ Black (2x)", `casino_roubet_black-${amount}-0-0-0`)],
+        [Markup.button.callback("🟢 Green (14x)", `casino_roubet_green-${amount}-0-0-1`)],
+        [Markup.button.callback("🔙 Back", "menu_casino")],
+      ]);
+    }
+    const r = isRed ? 1 : 0, g = isGreen ? 1 : 0;
+    return Markup.inlineKeyboard([
+      [Markup.button.callback("🔴 Red (2x)", `casino_roubet_red-${amount}-${num}-${r}-${g}`), Markup.button.callback("⚫ Black (2x)", `casino_roubet_black-${amount}-${num}-${r}-${g}`)],
+      [Markup.button.callback("🟢 Green (14x)", `casino_roubet_green-${amount}-${num}-${r}-${g}`)],
+      [Markup.button.callback("🔙 Back", "menu_casino")],
+    ]);
+  },
+
+  coinflipBet: (amount) =>
+    Markup.inlineKeyboard([
+      [Markup.button.callback(`🪙 Flip ${amount}`, `casino_coinflip_${amount}`), Markup.button.callback("🔙 Back", "menu_casino")],
+    ]),
+
+  coinflipChoice: (amount, result) =>
+    Markup.inlineKeyboard([
+      [Markup.button.callback("🪙 Heads", `casino_coinpick_heads-${amount}-${result}`), Markup.button.callback("🪙 Tails", `casino_coinpick_tails-${amount}-${result}`)],
+    ]),
+
+  diceRoll: (amount) =>
+    Markup.inlineKeyboard([
+      [Markup.button.callback(`🎲 Roll Again (${amount})`, `casino_dice_${amount}`), Markup.button.callback("🔙 Back", "menu_casino")],
     ]),
 
   rpgMenu: () =>
@@ -147,9 +208,9 @@ const KB = {
       [Markup.button.callback("🌡 Vibe", "vibe_vibe"), Markup.button.callback("✅ Vibe Check", "vibe_vibecheck"), Markup.button.callback("⚡ Energy", "vibe_energy")],
       [Markup.button.callback("✨ Aura", "vibe_aura"), Markup.button.callback("😎 Rizz", "vibe_rizz"), Markup.button.callback("🗿 Sigma", "vibe_sigma")],
       [Markup.button.callback("📊 Ratio", "vibe_ratio"), Markup.button.callback("🤖 NPC", "vibe_npc"), Markup.button.callback("😭 Cope", "vibe_cope")],
-      [Markup.button.callback("🌡 Mood", "vibe_mood"), Markup.button.callback("🤫 Lowkey", "vibe_lowkey"), Markup.button.callback("💅 Slay", "vibe_slay")],
-      [Markup.button.callback("👻 Ghost", "vibe_ghost"), Markup.button.callback("⚠️ Toxic", "vibe_toxic"), Markup.button.callback("💯 Real", "vibe_real")],
-      [Markup.button.callback("🔍 Sus", "vibe_sus"), Markup.button.callback("📸 Caught", "vibe_caught"), Markup.button.callback("📊 Clout", "vibe_clout")],
+      [Markup.button.callback("🌡 Mood", "vibe_mood"), Markup.button.callback("💅 Slay", "vibe_slay")],
+      [Markup.button.callback("👻 Ghost", "vibe_ghost"), Markup.button.callback("⚠️ Toxic", "vibe_toxic"), Markup.button.callback("🔍 Sus", "vibe_sus")],
+      [Markup.button.callback("📸 Clout", "vibe_clout")],
       [Markup.button.callback("🔙 Back", "menu_main")],
     ]),
 
@@ -180,6 +241,18 @@ const KB = {
   confirm: (yesAction, noAction = "menu_main") =>
     Markup.inlineKeyboard([
       [Markup.button.callback("✅ Yes", yesAction), Markup.button.callback("❌ No", noAction)],
+    ]),
+
+  pokemonStarterMenu: () =>
+    Markup.inlineKeyboard([
+      [Markup.button.callback("🌿 Bulbasaur", "starter_bulbasaur"), Markup.button.callback("🔥 Charmander", "starter_charmander"), Markup.button.callback("💧 Squirtle", "starter_squirtle")],
+      [Markup.button.callback("🌿 Chikorita", "starter_chikorita"), Markup.button.callback("🔥 Cyndaquil", "starter_cyndaquil"), Markup.button.callback("💧 Totodile", "starter_totodile")],
+      [Markup.button.callback("🌿 Treecko", "starter_treecko"), Markup.button.callback("🔥 Torchic", "starter_torchic"), Markup.button.callback("💧 Mudkip", "starter_mudkip")],
+      [Markup.button.callback("🌿 Turtwig", "starter_turtwig"), Markup.button.callback("🔥 Chimchar", "starter_chimchar"), Markup.button.callback("💧 Piplup", "starter_piplup")],
+      [Markup.button.callback("🌿 Snivy", "starter_snivy"), Markup.button.callback("🔥 Tepig", "starter_tepig"), Markup.button.callback("💧 Oshawott", "starter_oshawott")],
+      [Markup.button.callback("🌿 Rowlet", "starter_rowlet"), Markup.button.callback("🔥 Litten", "starter_litten"), Markup.button.callback("💧 Popplio", "starter_popplio")],
+      [Markup.button.callback("🌿 Grookey", "starter_grookey"), Markup.button.callback("🔥 Scorbunny", "starter_scorbunny"), Markup.button.callback("💧 Sobble", "starter_sobble")],
+      [Markup.button.callback("🔙 Back", "menu_pokemon")],
     ]),
 };
 
