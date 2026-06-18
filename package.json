@@ -1,0 +1,22 @@
+{
+  "name": "aqua-telegram-bot",
+  "version": "1.0.0",
+  "description": "Aqua — full-featured Telegram bot for the KONOSUBA community",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "telegraf": "^4.16.3",
+    "axios": "^1.7.2",
+    "dotenv": "^16.4.5",
+    "node-cache": "^5.1.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
