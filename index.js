@@ -1,4 +1,5 @@
 require("dotenv").config();
+const http = require("http");
 const { Telegraf } = require("telegraf");
 const { handleCallback, handleTextMessage } = require("./src/handler");
 const KB = require("./src/utils/keyboards");
@@ -59,15 +60,24 @@ async function launch() {
   const port = parseInt(process.env.PORT || "3000");
 
   if (webhookUrl) {
-    await bot.launch({
-      webhook: {
-        domain: webhookUrl,
-        port,
-        secretPath: `/telegraf/${token}`,
+    // Create a combined HTTP server: health check + Telegraf webhook
+    const webhookCallback = bot.webhookCallback(`/telegraf/${token}`);
+
+    const server = http.createServer((req, res) => {
+      if (req.url === "/" || req.url === "/health") {
+        res.writeHead(200);
+        res.end("Aqua Bot is running!");
+        return;
       }
+      webhookCallback(req, res);
     });
-    console.log(`Aqua Bot launched via webhook on port ${port}`);
-    console.log(`Webhook: ${webhookUrl}/telegraf/${token}`);
+
+    server.listen(port, () => {
+      console.log(`Aqua Bot listening on port ${port}`);
+    });
+
+    await bot.telegram.setWebhook(`${webhookUrl}/telegraf/${token}`);
+    console.log(`Webhook set: ${webhookUrl}/telegraf/${token}`);
   } else {
     await bot.launch();
     console.log("Aqua Bot launched via long-polling");
@@ -82,7 +92,7 @@ async function launch() {
       ownerId,
       "✅ *Aqua Bot is back online!*",
       { parse_mode: "Markdown" }
-    ).catch(() => {}); // silently fail if owner hasn't started the bot
+    ).catch(() => {});
   }
 }
 
@@ -93,4 +103,3 @@ launch().catch((err) => {
 
 process.once("SIGINT",  () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
-        
