@@ -7,16 +7,15 @@ const KB = require("./src/utils/keyboards");
 const token = process.env.BOT_TOKEN;
 if (!token) { console.error("BOT_TOKEN is not set. Add it to .env"); process.exit(1); }
 
-
 const startTime = Math.floor(Date.now() / 1000);
+const bot = new Telegraf(token);
 
+// Ignore stale updates from before bot started (prevents restart loop)
 bot.use(async (ctx, next) => {
   const msgTime = ctx.message?.date || ctx.update?.message?.date || 0;
-  if (msgTime && msgTime < startTime) return; // ignore old messages
+  if (msgTime && msgTime < startTime) return;
   return next();
 });
-
-const bot = new Telegraf(token);
 
 bot.start((ctx) => {
   const name = ctx.from.first_name || "Adventurer";
@@ -69,7 +68,7 @@ async function launch() {
   const port = parseInt(process.env.PORT || "3000");
 
   if (webhookUrl) {
-    // Create a combined HTTP server: health check + Telegraf webhook
+    // Combined HTTP server: health check + Telegraf webhook
     const webhookCallback = bot.webhookCallback(`/telegraf/${token}`);
 
     const server = http.createServer((req, res) => {
@@ -94,7 +93,7 @@ async function launch() {
 
   console.log(`Bot: @${bot.botInfo?.username || "Aqua"}`);
 
-  // Notify owner that bot is online (useful after restarts)
+  // Notify owner that bot is back online
   const ownerId = process.env.OWNER_ID;
   if (ownerId) {
     await bot.telegram.sendMessage(
