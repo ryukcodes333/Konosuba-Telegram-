@@ -74,6 +74,16 @@ async function launch() {
   }
 
   console.log(`Bot: @${bot.botInfo?.username || "Aqua"}`);
+
+  // Notify owner that bot is online (useful after restarts)
+  const ownerId = process.env.OWNER_ID;
+  if (ownerId) {
+    await bot.telegram.sendMessage(
+      ownerId,
+      "✅ *Aqua Bot is back online!*",
+      { parse_mode: "Markdown" }
+    ).catch(() => {}); // silently fail if owner hasn't started the bot
+  }
 }
 
 launch().catch((err) => {
@@ -83,3 +93,4 @@ launch().catch((err) => {
 
 process.once("SIGINT",  () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
+        
