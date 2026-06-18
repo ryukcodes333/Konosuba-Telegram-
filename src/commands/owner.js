@@ -344,7 +344,8 @@ async function handleOwner(ctx, action, args = []) {
     }
 
     case "restart": {
-      await replyText(ctx, "Restarting bot...", null, msgId);
+      await replyText(ctx, "🔄 Restarting bot... I'll be back in a few seconds!", null, msgId);
+      await new Promise(r => setTimeout(r, 1500));
       process.exit(0);
     }
 
